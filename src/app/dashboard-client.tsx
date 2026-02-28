@@ -96,22 +96,23 @@ export function DashboardClient({
     ? calculateBMI(latestWeight, heightCm)
     : null;
 
-  // Weight trend vs 7 days ago
+  // 7-day stats: only measurements from the last 7 days
   const sevenDaysAgo = subDays(new Date(), 7);
-  const weight7DaysAgo = measurements.find((m) => {
+  const measurementsLast7Days = measurements.filter((m) => {
     const d = new Date(m.created_at ?? "");
-    return d <= sevenDaysAgo;
-  })?.weight_kg;
+    return d >= sevenDaysAgo;
+  });
+
+  // Trend = change from oldest to newest within the 7-day window
   const trend =
-    latestWeight !== null && weight7DaysAgo !== undefined
-      ? latestWeight - weight7DaysAgo
+    measurementsLast7Days.length >= 2
+      ? (measurementsLast7Days[0]?.weight_kg ?? 0) - (measurementsLast7Days[measurementsLast7Days.length - 1]?.weight_kg ?? 0)
       : null;
 
-  // 7-day rolling average (last 7 measurements)
-  const last7 = measurements.slice(0, 7);
+  // Average = mean of all measurements in the last 7 days
   const rollingAvg =
-    last7.length > 0
-      ? last7.reduce((sum, m) => sum + m.weight_kg, 0) / last7.length
+    measurementsLast7Days.length > 0
+      ? measurementsLast7Days.reduce((sum, m) => sum + m.weight_kg, 0) / measurementsLast7Days.length
       : null;
 
   const bmiZones = getBMIZoneBoundaries(heightCm);
@@ -271,25 +272,27 @@ export function DashboardClient({
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>7-day</CardDescription>
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-sm">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-base">
                 <span className="text-[var(--muted-foreground)]">Trend:</span>
                 {trend !== null ? (
-                  <span className="flex items-center gap-1 font-medium">
-                    {trend > 0 && <TrendingUp className="h-4 w-4 text-amber-500" />}
-                    {trend < 0 && <TrendingDown className="h-4 w-4 text-emerald-500" />}
-                    {trend === 0 && <Minus className="h-4 w-4 text-[var(--muted-foreground)]" />}
+                  <span className="flex items-center gap-1 text-lg font-medium">
+                    {trend > 0 && <TrendingUp className="h-5 w-5 text-amber-500" />}
+                    {trend < 0 && <TrendingDown className="h-5 w-5 text-emerald-500" />}
+                    {trend === 0 && <Minus className="h-5 w-5 text-[var(--muted-foreground)]" />}
                     {trend > 0 ? "+" : ""}
                     {trend.toFixed(1)} kg
                   </span>
                 ) : (
-                  <span>—</span>
+                  <span className="text-lg text-[var(--muted-foreground)]">N/A</span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-base">
                 <span className="text-[var(--muted-foreground)]">Average:</span>
-                <span className="font-medium">
-                  {rollingAvg != null ? `${rollingAvg.toFixed(1)} kg` : "—"}
+                <span className="text-lg font-medium">
+                  {rollingAvg != null ? `${rollingAvg.toFixed(1)} kg` : (
+                    <span className="text-[var(--muted-foreground)]">N/A</span>
+                  )}
                 </span>
               </div>
             </div>
