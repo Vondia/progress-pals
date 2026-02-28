@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { format, subDays, addMonths, differenceInDays, differenceInWeeks } from "date-fns";
+import { format, subDays, addMonths, differenceInDays } from "date-fns";
 import {
   LineChart,
   Line,
@@ -93,6 +93,15 @@ export function DashboardClient({
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Measurement | null>(null);
   const [deleteGoalTarget, setDeleteGoalTarget] = useState<Goal | null>(null);
+  const [ambitiousPopoverGoalId, setAmbitiousPopoverGoalId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(typeof window !== "undefined" && window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const [goalWeight, setGoalWeight] = useState("");
   const [goalDeadline, setGoalDeadline] = useState("");
   const [goalSubmitting, setGoalSubmitting] = useState(false);
@@ -133,7 +142,9 @@ export function DashboardClient({
 
   const bmiZones = getBMIZoneBoundaries(heightCm);
 
-  const chartMeasurements = showFullHistory ? measurements : measurements.slice(0, 50);
+  const chartLimit =
+    showFullHistory ? measurements.length : (showGoalLine || showShortTermGoalLine ? 25 : 50);
+  const chartMeasurements = showFullHistory ? measurements : measurements.slice(0, chartLimit);
   const chartData = [...chartMeasurements].reverse().map((m) => ({
     id: m.id,
     date: format(new Date(m.created_at ?? ""), "MMM d"),
@@ -483,7 +494,12 @@ export function DashboardClient({
               <ResponsiveContainer width="100%" height="100%" key={`${showBMIZones}-${showGoalLine}-${showShortTermGoalLine}`}>
                 <LineChart
                   data={chartData}
-                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                  margin={{
+                    top: 5,
+                    right: showBMIZones || showGoalLine || showShortTermGoalLine ? 70 : 20,
+                    left: 0,
+                    bottom: 5,
+                  }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis
@@ -511,13 +527,13 @@ export function DashboardClient({
                       const weight = point.value;
                       const fullDate = point.payload?.fullDate;
                       return (
-                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 shadow-lg">
-                          <p className="text-sm font-medium text-[var(--foreground)]">
+                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-2 shadow-lg text-base">
+                          <p className="font-medium text-[var(--foreground)]">
                             {fullDate
                               ? format(new Date(fullDate), "PPp")
                               : point.payload?.date}
                           </p>
-                          <p className="text-sm text-[var(--accent)]">
+                          <p className="text-[var(--accent)]">
                             {weight != null ? `${weight} kg` : ""}
                           </p>
                         </div>
@@ -597,8 +613,8 @@ export function DashboardClient({
                     dataKey="weight"
                     stroke="var(--accent)"
                     strokeWidth={2}
-                    dot={{ fill: "var(--accent)", r: 4 }}
-                    activeDot={{ r: 6 }}
+                    dot={{ fill: "var(--accent)", r: isMobile ? 2.5 : 4 }}
+                    activeDot={{ r: isMobile ? 4 : 6 }}
                     isAnimationActive={false}
                   />
                 </LineChart>
@@ -627,10 +643,7 @@ export function DashboardClient({
                   0,
                   differenceInDays(deadlineDate, now)
                 );
-                const weeksRemaining = Math.max(
-                  0.1,
-                  differenceInWeeks(deadlineDate, now)
-                );
+                const weeksRemaining = Math.max(daysRemaining / 7, 0.01);
                 const kgToLose =
                   latestWeight != null
                     ? latestWeight - goal.target_weight_kg
@@ -686,13 +699,43 @@ export function DashboardClient({
                             </strong>
                           </span>
                           {isAmbitious && (
-                            <span
-                              className="flex cursor-help items-center gap-1 text-amber-500"
-                              title="Health experts typically recommend losing 0.5–1 kg per week. Losing more than 1 kg/week can be difficult to sustain and may not be healthy."
-                            >
-                              <AlertTriangle className="h-4 w-4" />
-                              Ambitious
-                            </span>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAmbitiousPopoverGoalId(
+                                    ambitiousPopoverGoalId === goal.id ? null : goal.id
+                                  )
+                                }
+                                className="flex cursor-pointer items-center gap-1 text-amber-500 hover:text-amber-600"
+                              >
+                                <AlertTriangle className="h-4 w-4" />
+                                Ambitious
+                              </button>
+                              {ambitiousPopoverGoalId === goal.id && (
+                                <>
+                                  <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setAmbitiousPopoverGoalId(null)}
+                                    aria-hidden
+                                  />
+                                  <div className="absolute right-0 top-full z-50 mt-1 w-[250px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 shadow-lg">
+                                    <p className="text-sm text-[var(--foreground)]">
+                                      Health experts typically recommend losing 0.5–1 kg per week.
+                                      Losing more than 1 kg/week can be difficult to sustain and
+                                      may not be healthy.
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => setAmbitiousPopoverGoalId(null)}
+                                      className="mt-2 text-xs font-medium text-[var(--accent)] hover:underline"
+                                    >
+                                      Close
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           )}
                         </>
                       )}
