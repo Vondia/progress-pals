@@ -25,6 +25,12 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(100);
 
+  const { data: goals } = await supabase
+    .from("goals")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("deadline", { ascending: true });
+
   const { data: quotes } = await supabase
     .from("quotes")
     .select("*");
@@ -37,6 +43,7 @@ export default async function DashboardPage() {
     <DashboardClient
       profile={profile}
       measurements={measurements ?? []}
+      goals={goals ?? []}
       quote={quote}
     />
   );

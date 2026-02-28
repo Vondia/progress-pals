@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { format, subDays } from "date-fns";
+import { format, subDays, addMonths, differenceInDays, differenceInWeeks } from "date-fns";
 import {
   LineChart,
   Line,
@@ -33,17 +33,22 @@ import {
   LogOut,
   Quote,
   ChevronDown,
+  Target,
+  Trophy,
+  AlertTriangle,
 } from "lucide-react";
 
 import type { Tables } from "@/types/database.types";
 
 type Profile = Tables<"profiles">;
 type Measurement = Tables<"measurements">;
+type Goal = Tables<"goals">;
 type Quote = Tables<"quotes"> | null;
 
 interface DashboardClientProps {
   profile: Profile;
   measurements: Measurement[];
+  goals: Goal[];
   quote: Quote;
 }
 
@@ -75,6 +80,7 @@ const HISTORY_INITIAL_COUNT = 4;
 export function DashboardClient({
   profile,
   measurements,
+  goals,
   quote,
 }: DashboardClientProps) {
   const router = useRouter();
@@ -83,11 +89,21 @@ export function DashboardClient({
   const [historyCount, setHistoryCount] = useState(HISTORY_INITIAL_COUNT);
   const [showBMIZones, setShowBMIZones] = useState(false);
   const [showGoalLine, setShowGoalLine] = useState(false);
+  const [showShortTermGoalLine, setShowShortTermGoalLine] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Measurement | null>(null);
+  const [deleteGoalTarget, setDeleteGoalTarget] = useState<Goal | null>(null);
+  const [goalWeight, setGoalWeight] = useState("");
+  const [goalDeadline, setGoalDeadline] = useState("");
+  const [goalSubmitting, setGoalSubmitting] = useState(false);
 
   const visibleMeasurements = measurements.slice(0, historyCount);
   const hasMore = measurements.length > historyCount;
+
+  const now = new Date();
+  const upcomingShortTermGoal = goals
+    .filter((g) => g.status !== "achieved" && new Date(g.deadline) >= now)
+    .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0] ?? null;
 
   const latestWeight = measurements[0]?.weight_kg ?? null;
   const heightCm = profile.height_cm ?? 170;
@@ -131,10 +147,12 @@ export function DashboardClient({
     weightMin - 2,
     showBMIZones ? bmiZones.underweight - 5 : Infinity,
     showGoalLine && targetWeightKg != null ? targetWeightKg - 5 : Infinity,
+    showShortTermGoalLine && upcomingShortTermGoal ? upcomingShortTermGoal.target_weight_kg - 5 : Infinity,
   ].reduce((a, b) => Math.min(a, b));
   const effectiveMax = [
     weightMax + 5,
     showGoalLine && targetWeightKg != null ? targetWeightKg + 5 : 0,
+    showShortTermGoalLine && upcomingShortTermGoal ? upcomingShortTermGoal.target_weight_kg + 5 : 0,
   ].reduce((a, b) => Math.max(a, b));
   const yDomainMin = effectiveMin;
   const yDomainMax = effectiveMax;
@@ -166,6 +184,28 @@ export function DashboardClient({
     setWeightInput("");
     if (error) return;
 
+    // Check if any goal was achieved
+    const achievedGoals = goals.filter(
+      (g) => g.status !== "achieved" && weight <= g.target_weight_kg
+    );
+    if (achievedGoals.length > 0) {
+      const supabaseGoal = createClient();
+      for (const g of achievedGoals) {
+        await supabaseGoal.from("goals").update({ status: "achieved" }).eq("id", g.id);
+      }
+      const confettiModule = await import("canvas-confetti");
+      const confetti = confettiModule.default ?? confettiModule;
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { x: 0.5, y: 0.6 },
+        colors: ["#f97316", "#7c3aed", "#e8e4ef"],
+        zIndex: 9999,
+      });
+      setTimeout(() => router.refresh(), 800);
+      return;
+    }
+
     // Celebrate only when weight has gone down
     if (latestWeight != null && weight < latestWeight) {
       const confettiModule = await import("canvas-confetti");
@@ -184,10 +224,42 @@ export function DashboardClient({
     }
   }
 
+  async function handleAddGoal(e: React.FormEvent) {
+    e.preventDefault();
+    const weight = parseFloat(goalWeight);
+    if (isNaN(weight) || weight < 20 || weight > 300) return;
+
+    setGoalSubmitting(true);
+    const deadline = goalDeadline
+      ? new Date(goalDeadline).toISOString().split("T")[0]
+      : format(addMonths(new Date(), 2), "yyyy-MM-dd");
+
+    const supabase = createClient();
+    const { error } = await supabase.from("goals").insert({
+      user_id: profile.id,
+      target_weight_kg: weight,
+      deadline,
+    });
+
+    setGoalSubmitting(false);
+    setGoalWeight("");
+    setGoalDeadline("");
+    if (error) return;
+
+    router.refresh();
+  }
+
   async function handleDelete(id: number) {
     const supabase = createClient();
     await supabase.from("measurements").delete().eq("id", id);
     setDeleteTarget(null);
+    router.refresh();
+  }
+
+  async function handleDeleteGoal(id: string) {
+    const supabase = createClient();
+    await supabase.from("goals").delete().eq("id", id);
+    setDeleteGoalTarget(null);
     router.refresh();
   }
 
@@ -199,7 +271,7 @@ export function DashboardClient({
   }
 
   return (
-    <div className="min-h-screen p-4 pb-8 md:p-6">
+    <div className="min-h-screen w-full max-w-full p-4 pb-8 md:p-6 lg:px-8 xl:px-12">
       <header className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Scale className="h-7 w-7 text-[var(--accent)]" />
@@ -230,28 +302,61 @@ export function DashboardClient({
         </Card>
       )}
 
-      {/* Weight input */}
+      {/* Weight input & Short-term goal */}
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Log your weight</CardTitle>
-          <CardDescription>Track your progress with each measurement</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleAddWeight} className="flex gap-2">
-            <Input
-              type="number"
-              step="0.1"
-              min={20}
-              max={300}
-              placeholder="Weight (kg)"
-              value={weightInput}
-              onChange={(e) => setWeightInput(e.target.value)}
-              className="text-lg"
-            />
-            <Button type="submit" disabled={submitting}>
-              Add
-            </Button>
-          </form>
+        <CardContent className="pt-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h3 className="font-semibold">Log your weight</h3>
+              <p className="mb-2 text-sm text-[var(--muted-foreground)]">
+                Track your progress with each measurement
+              </p>
+              <form onSubmit={handleAddWeight} className="flex gap-2">
+                <Input
+                  type="number"
+                  step="0.1"
+                  min={20}
+                  max={300}
+                  placeholder="Weight (kg)"
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  className="text-lg"
+                />
+                <Button type="submit" disabled={submitting}>
+                  Add
+                </Button>
+              </form>
+            </div>
+            <div>
+              <h3 className="font-semibold">Set Short-Term Goal</h3>
+              <p className="mb-2 text-sm text-[var(--muted-foreground)]">
+                Goal weight and deadline
+              </p>
+              <form onSubmit={handleAddGoal} className="flex flex-wrap gap-2">
+                <Input
+                  type="number"
+                  step="0.1"
+                  min={20}
+                  max={300}
+                  placeholder="Goal (kg)"
+                  value={goalWeight}
+                  onChange={(e) => setGoalWeight(e.target.value)}
+                  className="w-24"
+                  required
+                />
+                <Input
+                  type="date"
+                  value={goalDeadline}
+                  onChange={(e) => setGoalDeadline(e.target.value)}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  className="w-36"
+                />
+                <Button type="submit" disabled={goalSubmitting}>
+                  Add Goal
+                </Button>
+              </form>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -311,25 +416,44 @@ export function DashboardClient({
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Goals</CardDescription>
-            {targetWeightKg != null && (
-              <p className="text-2xl font-semibold text-[var(--accent)]">
-                {targetWeightKg} kg
-              </p>
-            )}
-            {targetWeightKg == null && (
-              <p className="text-sm text-[var(--muted-foreground)]">No target set</p>
-            )}
-            {targetWeightKg != null && (
-              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                <input
-                  type="checkbox"
-                  checked={showGoalLine}
-                  onChange={(e) => setShowGoalLine(e.target.checked)}
-                  className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
-                />
-                <span>Show goal line on chart</span>
-              </label>
-            )}
+            <div className="relative">
+              {upcomingShortTermGoal ? (
+                <p className="text-2xl font-semibold text-[var(--accent)]">
+                  {upcomingShortTermGoal.target_weight_kg} kg
+                </p>
+              ) : (
+                <p className="text-sm text-[var(--muted-foreground)]">No short-term goal</p>
+              )}
+              {targetWeightKg != null && (
+                <p className="absolute right-0 top-0 text-xs text-[var(--muted-foreground)]">
+                  Long-term: {targetWeightKg} kg
+                </p>
+              )}
+            </div>
+            <div className="mt-2 space-y-1">
+              {targetWeightKg != null && (
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                  <input
+                    type="checkbox"
+                    checked={showGoalLine}
+                    onChange={(e) => setShowGoalLine(e.target.checked)}
+                    className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+                  />
+                  <span>Show long-term goal line</span>
+                </label>
+              )}
+              {upcomingShortTermGoal != null && (
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                  <input
+                    type="checkbox"
+                    checked={showShortTermGoalLine}
+                    onChange={(e) => setShowShortTermGoalLine(e.target.checked)}
+                    className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+                  />
+                  <span>Show short-term goal line</span>
+                </label>
+              )}
+            </div>
           </CardHeader>
         </Card>
       </div>
@@ -356,7 +480,7 @@ export function DashboardClient({
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%" key={`${showBMIZones}-${showGoalLine}`}>
+              <ResponsiveContainer width="100%" height="100%" key={`${showBMIZones}-${showGoalLine}-${showShortTermGoalLine}`}>
                 <LineChart
                   data={chartData}
                   margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
@@ -456,7 +580,16 @@ export function DashboardClient({
                       stroke="var(--accent)"
                       strokeWidth={2}
                       strokeDasharray="4 4"
-                      label={{ value: "Goal", position: "right", fill: "var(--accent)" }}
+                      label={{ value: "Long-term", position: "right", fill: "var(--accent)" }}
+                    />
+                  )}
+                  {showShortTermGoalLine && upcomingShortTermGoal != null && (
+                    <ReferenceLine
+                      y={upcomingShortTermGoal.target_weight_kg}
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      strokeDasharray="2 2"
+                      label={{ value: "Short-term", position: "right", fill: "var(--accent)" }}
                     />
                   )}
                   <Line
@@ -473,6 +606,139 @@ export function DashboardClient({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Active Goals */}
+      {goals.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Active Goals</CardTitle>
+            <CardDescription>Your short-term weight goals</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-4">
+              {goals.map((goal) => {
+                const deadlineDate = new Date(goal.deadline);
+                const now = new Date();
+                const isAchieved =
+                  goal.status === "achieved" ||
+                  (latestWeight != null && latestWeight <= goal.target_weight_kg);
+                const daysRemaining = Math.max(
+                  0,
+                  differenceInDays(deadlineDate, now)
+                );
+                const weeksRemaining = Math.max(
+                  0.1,
+                  differenceInWeeks(deadlineDate, now)
+                );
+                const kgToLose =
+                  latestWeight != null
+                    ? latestWeight - goal.target_weight_kg
+                    : goal.target_weight_kg;
+                const kgPerWeek = kgToLose / weeksRemaining;
+                const isAmbitious = kgPerWeek > 1;
+
+                return (
+                  <li
+                    key={goal.id}
+                    className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-[var(--accent)]" />
+                        <span className="text-lg font-semibold">
+                          {goal.target_weight_kg} kg
+                        </span>
+                        {isAchieved && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-sm font-medium text-emerald-500">
+                            <Trophy className="h-4 w-4" />
+                            Goal Achieved!
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-[var(--muted-foreground)]">
+                          Deadline: {format(deadlineDate, "PP")}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteGoalTarget(goal)}
+                          className="text-red-400 hover:bg-red-500/20 hover:text-red-400"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 text-sm">
+                      <span>
+                        Days remaining:{" "}
+                        <strong>
+                          {isAchieved ? 0 : daysRemaining}
+                        </strong>
+                      </span>
+                      {!isAchieved && latestWeight != null && (
+                        <>
+                          <span>
+                            Realism:{" "}
+                            <strong>
+                              {(kgPerWeek).toFixed(2)} kg/week
+                            </strong>
+                          </span>
+                          {isAmbitious && (
+                            <span
+                              className="flex cursor-help items-center gap-1 text-amber-500"
+                              title="Health experts typically recommend losing 0.5–1 kg per week. Losing more than 1 kg/week can be difficult to sustain and may not be healthy."
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                              Ambitious
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Delete goal confirmation modal */}
+      {deleteGoalTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setDeleteGoalTarget(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold">Delete goal?</h3>
+            <p className="mt-2 text-[var(--muted-foreground)]">
+              Are you sure you want to delete this goal?
+            </p>
+            <p className="mt-1 font-medium">
+              {deleteGoalTarget.target_weight_kg} kg — {format(new Date(deleteGoalTarget.deadline), "PP")}
+            </p>
+            <div className="mt-6 flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDeleteGoalTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                onClick={() => handleDeleteGoal(deleteGoalTarget.id)}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete confirmation modal */}
