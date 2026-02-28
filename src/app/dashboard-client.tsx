@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import confetti from "canvas-confetti";
 import { format, subDays } from "date-fns";
 import {
   LineChart,
@@ -85,6 +84,7 @@ export function DashboardClient({
   const [showBMIZones, setShowBMIZones] = useState(false);
   const [showGoalLine, setShowGoalLine] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Measurement | null>(null);
 
   const visibleMeasurements = measurements.slice(0, historyCount);
   const hasMore = measurements.length > historyCount;
@@ -166,18 +166,28 @@ export function DashboardClient({
     setWeightInput("");
     if (error) return;
 
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ["#f97316", "#7c3aed", "#e8e4ef"],
-    });
-    router.refresh();
+    // Celebrate only when weight has gone down
+    if (latestWeight != null && weight < latestWeight) {
+      const confettiModule = await import("canvas-confetti");
+      const confetti = confettiModule.default ?? confettiModule;
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { x: 0.5, y: 0.6 },
+        colors: ["#f97316", "#7c3aed", "#e8e4ef"],
+        zIndex: 9999,
+      });
+      // Delay refresh so confetti has time to render before the page re-renders
+      setTimeout(() => router.refresh(), 800);
+    } else {
+      router.refresh();
+    }
   }
 
   async function handleDelete(id: number) {
     const supabase = createClient();
     await supabase.from("measurements").delete().eq("id", id);
+    setDeleteTarget(null);
     router.refresh();
   }
 
@@ -465,6 +475,42 @@ export function DashboardClient({
         </Card>
       )}
 
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold">Delete weight entry?</h3>
+            <p className="mt-2 text-[var(--muted-foreground)]">
+              Are you sure you want to delete this input?
+            </p>
+            <p className="mt-1 font-medium">
+              {deleteTarget.weight_kg} kg — {format(new Date(deleteTarget.created_at ?? ""), "PP")}
+            </p>
+            <div className="mt-6 flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                onClick={() => handleDelete(deleteTarget.id)}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* History */}
       <Card>
         <CardHeader>
@@ -493,7 +539,7 @@ export function DashboardClient({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleDelete(m.id)}
+                      onClick={() => setDeleteTarget(m)}
                       className="text-red-400 hover:bg-red-500/20 hover:text-red-400"
                     >
                       <Trash2 className="h-4 w-4" />
