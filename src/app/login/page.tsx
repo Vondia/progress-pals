@@ -23,6 +23,8 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const authErrorFromUrl =
     searchParams.get("error") === "auth"
@@ -36,6 +38,19 @@ function LoginForm() {
     setLoading(true);
 
     const supabase = createClient();
+    if (forgotMode) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      setResetSent(true);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     setLoading(false);
@@ -55,9 +70,13 @@ function LoginForm() {
 
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
+          <CardTitle className="text-2xl">
+            {forgotMode ? "Reset password" : "Welcome back"}
+          </CardTitle>
           <CardDescription>
-            Sign in to continue tracking your progress
+            {forgotMode
+              ? "Enter your email and we'll send you a reset link"
+              : "Sign in to continue tracking your progress"}
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -83,42 +102,96 @@ function LoginForm() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
+            {!forgotMode && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="pl-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotMode(true);
+                    setError(null);
+                  }}
+                  className="text-sm text-(--accent) hover:underline"
+                >
+                  Forgot password?
+                </button>
               </div>
-            </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              disabled={loading}
-            >
-              {loading ? "Signing in…" : "Sign in"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-            <p className="text-center text-sm text-(--muted-foreground)">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="/register"
-                className="font-medium text-(--accent) hover:underline"
-              >
-                Sign up
-              </Link>
-            </p>
+            {resetSent ? (
+              <div className="space-y-4">
+                <p className="text-center text-sm text-(--muted-foreground)">
+                  Check your email for the reset link. It may take a few minutes
+                  to arrive.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResetSent(false);
+                    setForgotMode(false);
+                  }}
+                  className="text-sm text-(--accent) hover:underline"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
+              <>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  size="lg"
+                  disabled={loading}
+                >
+                  {loading
+                    ? forgotMode
+                      ? "Sending…"
+                      : "Signing in…"
+                    : forgotMode
+                      ? "Send reset link"
+                      : "Sign in"}
+                  {!forgotMode && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
+                <p className="text-center text-sm text-(--muted-foreground)">
+                  {forgotMode ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotMode(false);
+                        setError(null);
+                      }}
+                      className="font-medium text-(--accent) hover:underline"
+                    >
+                      Back to sign in
+                    </button>
+                  ) : (
+                    <>
+                      Don&apos;t have an account?{" "}
+                      <Link
+                        href="/register"
+                        className="font-medium text-(--accent) hover:underline"
+                      >
+                        Sign up
+                      </Link>
+                    </>
+                  )}
+                </p>
+              </>
+            )}
           </CardFooter>
         </form>
       </Card>

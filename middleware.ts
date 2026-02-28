@@ -47,6 +47,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Allow reset-password without profile check (recovery flow)
+  if (pathname === "/reset-password") {
+    return response;
+  }
+
   // Check if user has a profile (onboarding)
   const { data: profile } = await supabase
     .from("profiles")

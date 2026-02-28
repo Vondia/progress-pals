@@ -719,7 +719,7 @@ export function DashboardClient({
                                     onClick={() => setAmbitiousPopoverGoalId(null)}
                                     aria-hidden
                                   />
-                                  <div className="absolute right-0 top-full z-50 mt-1 w-[250px] rounded-lg border border-(--border) bg-(--card) p-3 shadow-lg">
+                                  <div className="absolute left-0 top-full z-50 mt-1 w-[250px] rounded-lg border border-(--border) bg-(--card) p-3 shadow-lg">
                                     <p className="text-sm text-foreground">
                                       Health experts typically recommend losing 0.5–1 kg per week.
                                       Losing more than 1 kg/week can be difficult to sustain and
