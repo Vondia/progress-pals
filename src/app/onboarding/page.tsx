@@ -14,11 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Scale, Ruler, Calendar, User } from "lucide-react";
+import { Scale, Ruler, Calendar, User, Target } from "lucide-react";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [heightCm, setHeightCm] = useState("");
+  const [targetWeightKg, setTargetWeightKg] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [gender, setGender] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,9 +45,17 @@ export default function OnboardingPage() {
       return;
     }
 
+    const targetWeight = Number(targetWeightKg);
+    if (isNaN(targetWeight) || targetWeight < 20 || targetWeight > 300) {
+      setError("Target weight must be between 20 and 300 kg");
+      setLoading(false);
+      return;
+    }
+
     const { error: insertError } = await supabase.from("profiles").insert({
       id: user.id,
       height_cm: height,
+      target_weight_kg: targetWeight,
       birthdate,
       gender: gender || "prefer_not_to_say",
     });
@@ -95,6 +104,24 @@ export default function OnboardingPage() {
                   className="pl-10"
                   value={heightCm}
                   onChange={(e) => setHeightCm(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="target_weight_kg">Target weight (kg)</Label>
+              <div className="relative">
+                <Target className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Input
+                  id="target_weight_kg"
+                  type="number"
+                  placeholder="75"
+                  min={20}
+                  max={300}
+                  step={0.1}
+                  className="pl-10"
+                  value={targetWeightKg}
+                  onChange={(e) => setTargetWeightKg(e.target.value)}
                   required
                 />
               </div>

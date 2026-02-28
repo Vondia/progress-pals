@@ -41,18 +41,21 @@ export type Database = {
           gender: string | null
           height_cm: number | null
           id: string
+          target_weight_kg: number | null
         }
         Insert: {
           birthdate?: string | null
           gender?: string | null
           height_cm?: number | null
           id: string
+          target_weight_kg?: number | null
         }
         Update: {
           birthdate?: string | null
           gender?: string | null
           height_cm?: number | null
           id?: string
+          target_weight_kg?: number | null
         }
         Relationships: []
       }

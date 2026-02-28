@@ -83,6 +83,7 @@ export function DashboardClient({
   const [submitting, setSubmitting] = useState(false);
   const [historyCount, setHistoryCount] = useState(HISTORY_INITIAL_COUNT);
   const [showBMIZones, setShowBMIZones] = useState(false);
+  const [showGoalLine, setShowGoalLine] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
 
   const visibleMeasurements = measurements.slice(0, historyCount);
@@ -90,6 +91,7 @@ export function DashboardClient({
 
   const latestWeight = measurements[0]?.weight_kg ?? null;
   const heightCm = profile.height_cm ?? 170;
+  const targetWeightKg = profile.target_weight_kg ?? null;
   const currentBMI = latestWeight
     ? calculateBMI(latestWeight, heightCm)
     : null;
@@ -124,10 +126,17 @@ export function DashboardClient({
 
   const weightMin = chartData.length ? Math.min(...chartData.map((d) => d.weight)) : 0;
   const weightMax = chartData.length ? Math.max(...chartData.map((d) => d.weight)) : 100;
-  const yDomainMin = showBMIZones
-    ? Math.min(bmiZones.underweight - 5, weightMin - 2)
-    : weightMin - 2;
-  const yDomainMax = weightMax + 5;
+  const effectiveMin = [
+    weightMin - 2,
+    showBMIZones ? bmiZones.underweight - 5 : Infinity,
+    showGoalLine && targetWeightKg != null ? targetWeightKg - 5 : Infinity,
+  ].reduce((a, b) => Math.min(a, b));
+  const effectiveMax = [
+    weightMax + 5,
+    showGoalLine && targetWeightKg != null ? targetWeightKg + 5 : 0,
+  ].reduce((a, b) => Math.max(a, b));
+  const yDomainMin = effectiveMin;
+  const yDomainMax = effectiveMax;
 
   // Y-axis ticks in 5 kg steps
   const yTicks = (() => {
@@ -261,28 +270,53 @@ export function DashboardClient({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>7-day trend</CardDescription>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              {trend !== null ? (
-                <>
-                  {trend > 0 && <TrendingUp className="h-6 w-6 text-amber-500" />}
-                  {trend < 0 && <TrendingDown className="h-6 w-6 text-emerald-500" />}
-                  {trend === 0 && <Minus className="h-6 w-6 text-[var(--muted-foreground)]" />}
-                  {trend > 0 ? "+" : ""}
-                  {trend.toFixed(1)} kg
-                </>
-              ) : (
-                "—"
-              )}
-            </CardTitle>
+            <CardDescription>7-day</CardDescription>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-[var(--muted-foreground)]">Trend:</span>
+                {trend !== null ? (
+                  <span className="flex items-center gap-1 font-medium">
+                    {trend > 0 && <TrendingUp className="h-4 w-4 text-amber-500" />}
+                    {trend < 0 && <TrendingDown className="h-4 w-4 text-emerald-500" />}
+                    {trend === 0 && <Minus className="h-4 w-4 text-[var(--muted-foreground)]" />}
+                    {trend > 0 ? "+" : ""}
+                    {trend.toFixed(1)} kg
+                  </span>
+                ) : (
+                  <span>—</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-[var(--muted-foreground)]">Average:</span>
+                <span className="font-medium">
+                  {rollingAvg != null ? `${rollingAvg.toFixed(1)} kg` : "—"}
+                </span>
+              </div>
+            </div>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>7-day average</CardDescription>
-            <CardTitle className="text-2xl">
-              {rollingAvg != null ? rollingAvg.toFixed(1) : "—"} kg
-            </CardTitle>
+            <CardDescription>Goals</CardDescription>
+            {targetWeightKg != null && (
+              <p className="text-2xl font-semibold text-[var(--accent)]">
+                {targetWeightKg} kg
+              </p>
+            )}
+            {targetWeightKg == null && (
+              <p className="text-sm text-[var(--muted-foreground)]">No target set</p>
+            )}
+            {targetWeightKg != null && (
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                <input
+                  type="checkbox"
+                  checked={showGoalLine}
+                  onChange={(e) => setShowGoalLine(e.target.checked)}
+                  className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+                />
+                <span>Show goal line on chart</span>
+              </label>
+            )}
           </CardHeader>
         </Card>
       </div>
@@ -309,7 +343,7 @@ export function DashboardClient({
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%" key={showBMIZones ? "zones" : "no-zones"}>
+              <ResponsiveContainer width="100%" height="100%" key={`${showBMIZones}-${showGoalLine}`}>
                 <LineChart
                   data={chartData}
                   margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
@@ -402,6 +436,15 @@ export function DashboardClient({
                         label={{ value: "30.0", position: "right", fill: "var(--muted-foreground)" }}
                       />
                     </>
+                  )}
+                  {showGoalLine && targetWeightKg != null && (
+                    <ReferenceLine
+                      y={targetWeightKg}
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      label={{ value: "Goal", position: "right", fill: "var(--accent)" }}
+                    />
                   )}
                   <Line
                     type="monotone"
