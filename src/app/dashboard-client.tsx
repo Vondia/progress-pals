@@ -13,6 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceArea,
+  ReferenceLine,
 } from "recharts";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,17 @@ function getBMICategory(bmi: number): string {
   return "Obese";
 }
 
+/** Returns weight (kg) at each BMI threshold for a given height. */
+function getBMIZoneBoundaries(heightCm: number) {
+  const heightM = heightCm / 100;
+  const h2 = heightM * heightM;
+  return {
+    underweight: 18.5 * h2,
+    healthy: 25 * h2,
+    overweight: 30 * h2,
+  };
+}
+
 const HISTORY_INITIAL_COUNT = 4;
 
 export function DashboardClient({
@@ -70,11 +82,12 @@ export function DashboardClient({
   const [weightInput, setWeightInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [historyCount, setHistoryCount] = useState(HISTORY_INITIAL_COUNT);
+  const [showBMIZones, setShowBMIZones] = useState(false);
+  const [showFullHistory, setShowFullHistory] = useState(false);
 
   const visibleMeasurements = measurements.slice(0, historyCount);
   const hasMore = measurements.length > historyCount;
 
-  const heightM = (profile.height_cm ?? 170) / 100;
   const latestWeight = measurements[0]?.weight_kg ?? null;
   const heightCm = profile.height_cm ?? 170;
   const currentBMI = latestWeight
@@ -99,18 +112,33 @@ export function DashboardClient({
       ? last7.reduce((sum, m) => sum + m.weight_kg, 0) / last7.length
       : null;
 
-  // BMI reference zones (weight values for ReferenceArea based on height)
-  const heightMForZones = heightCm / 100;
-  const underweightMax = 18.5 * heightMForZones * heightMForZones;
-  const healthyMax = 25 * heightMForZones * heightMForZones;
-  const overweightMax = 30 * heightMForZones * heightMForZones;
+  const bmiZones = getBMIZoneBoundaries(heightCm);
 
-  const chartData = [...measurements].reverse().map((m) => ({
+  const chartMeasurements = showFullHistory ? measurements : measurements.slice(0, 50);
+  const chartData = [...chartMeasurements].reverse().map((m) => ({
     id: m.id,
     date: format(new Date(m.created_at ?? ""), "MMM d"),
     weight: m.weight_kg,
     fullDate: m.created_at ?? "",
   }));
+
+  const weightMin = chartData.length ? Math.min(...chartData.map((d) => d.weight)) : 0;
+  const weightMax = chartData.length ? Math.max(...chartData.map((d) => d.weight)) : 100;
+  const yDomainMin = showBMIZones
+    ? Math.min(bmiZones.underweight - 5, weightMin - 2)
+    : weightMin - 2;
+  const yDomainMax = weightMax + 5;
+
+  // Y-axis ticks in 5 kg steps
+  const yTicks = (() => {
+    const min = Math.floor(yDomainMin / 5) * 5;
+    const max = Math.ceil(yDomainMax / 5) * 5;
+    const ticks: number[] = [];
+    for (let kg = min; kg <= max; kg += 5) {
+      ticks.push(kg);
+    }
+    return ticks;
+  })();
 
   async function handleAddWeight(e: React.FormEvent) {
     e.preventDefault();
@@ -220,6 +248,15 @@ export function DashboardClient({
                 {getBMICategory(currentBMI)}
               </p>
             )}
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+              <input
+                type="checkbox"
+                checked={showBMIZones}
+                onChange={(e) => setShowBMIZones(e.target.checked)}
+                className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+              />
+              <span>Show BMI zones on chart</span>
+            </label>
           </CardHeader>
         </Card>
         <Card>
@@ -253,13 +290,26 @@ export function DashboardClient({
       {/* Chart */}
       {chartData.length > 0 && (
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Weight over time</CardTitle>
-            <CardDescription>BMI zones based on your height ({heightCm} cm)</CardDescription>
+          <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+            <div>
+              <CardTitle>Weight over time</CardTitle>
+              {showBMIZones && (
+                <CardDescription>Based on your personal information</CardDescription>
+              )}
+            </div>
+            <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+              <input
+                type="checkbox"
+                checked={showFullHistory}
+                onChange={(e) => setShowFullHistory(e.target.checked)}
+                className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+              />
+              <span>Show full history</span>
+            </label>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" key={showBMIZones ? "zones" : "no-zones"}>
                 <LineChart
                   data={chartData}
                   margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
@@ -269,12 +319,14 @@ export function DashboardClient({
                     dataKey="fullDate"
                     stroke="var(--muted-foreground)"
                     fontSize={12}
-                    tickFormatter={(value) => format(new Date(value), "MMM d")}
+                    tickFormatter={(value) => format(new Date(value), "MMM d yyyy")}
                   />
                   <YAxis
                     stroke="var(--muted-foreground)"
                     fontSize={12}
-                    domain={["dataMin - 2", "dataMax + 2"]}
+                    domain={[yDomainMin, yDomainMax]}
+                    ticks={yTicks}
+                    tickFormatter={(value) => `${Math.round(value)} kg`}
                   />
                   <Tooltip
                     contentStyle={{
@@ -301,31 +353,56 @@ export function DashboardClient({
                       );
                     }}
                   />
-                  {/* BMI zones: Underweight <18.5, Healthy 18.5-25, Overweight 25-30, Obese >30 */}
-                  <ReferenceArea
-                    y1={0}
-                    y2={underweightMax}
-                    fill="#ef4444"
-                    fillOpacity={0.15}
-                  />
-                  <ReferenceArea
-                    y1={underweightMax}
-                    y2={healthyMax}
-                    fill="#22c55e"
-                    fillOpacity={0.15}
-                  />
-                  <ReferenceArea
-                    y1={healthyMax}
-                    y2={overweightMax}
-                    fill="#eab308"
-                    fillOpacity={0.15}
-                  />
-                  <ReferenceArea
-                    y1={overweightMax}
-                    y2={overweightMax + 50}
-                    fill="#ef4444"
-                    fillOpacity={0.15}
-                  />
+                  {/* BMI zones: Underweight <18.5, Healthy 18.5-24.9, Overweight 25-29.9, Obesity 30+ */}
+                  {showBMIZones && (
+                    <>
+                      <ReferenceArea
+                        y1={0}
+                        y2={bmiZones.underweight}
+                        fill="#ef4444"
+                        fillOpacity={0.2}
+                      />
+                      <ReferenceArea
+                        y1={bmiZones.underweight}
+                        y2={bmiZones.healthy}
+                        fill="#22c55e"
+                        fillOpacity={0.2}
+                      />
+                      <ReferenceArea
+                        y1={bmiZones.healthy}
+                        y2={bmiZones.overweight}
+                        fill="#eab308"
+                        fillOpacity={0.2}
+                      />
+                      <ReferenceArea
+                        y1={bmiZones.overweight}
+                        y2={bmiZones.overweight + 50}
+                        fill="#ef4444"
+                        fillOpacity={0.2}
+                      />
+                      <ReferenceLine
+                        y={bmiZones.underweight}
+                        stroke="#ef4444"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        label={{ value: "18.5", position: "right", fill: "var(--muted-foreground)" }}
+                      />
+                      <ReferenceLine
+                        y={bmiZones.healthy}
+                        stroke="#22c55e"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        label={{ value: "25.0", position: "right", fill: "var(--muted-foreground)" }}
+                      />
+                      <ReferenceLine
+                        y={bmiZones.overweight}
+                        stroke="#ef4444"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        label={{ value: "30.0", position: "right", fill: "var(--muted-foreground)" }}
+                      />
+                    </>
+                  )}
                   <Line
                     type="monotone"
                     dataKey="weight"
