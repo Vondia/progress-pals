@@ -285,7 +285,7 @@ export function DashboardClient({
     <div className="min-h-screen w-full max-w-full p-4 pb-8 md:p-6 lg:px-8 xl:px-12">
       <header className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Scale className="h-7 w-7 text-[var(--accent)]" />
+          <Scale className="h-7 w-7 text-(--accent)" />
           <span className="text-xl font-bold">Progress Pals</span>
         </div>
         <Button variant="ghost" size="sm" onClick={handleSignOut}>
@@ -296,15 +296,15 @@ export function DashboardClient({
 
       {/* Quote */}
       {quote && (
-        <Card className="mb-6 border-[var(--accent)]/30 bg-[var(--accent)]/5">
+        <Card className="mb-6 border-(--accent)/30 bg-(--accent)/5">
           <CardContent className="flex items-start gap-3 pt-6">
-            <Quote className="mt-0.5 h-5 w-5 shrink-0 text-[var(--accent)]" />
+            <Quote className="mt-0.5 h-5 w-5 shrink-0 text-(--accent)" />
             <div>
-              <p className="text-sm italic text-[var(--muted-foreground)]">
+              <p className="text-sm italic text-(--muted-foreground)">
                 &ldquo;{quote.text}&rdquo;
               </p>
               {quote.author && (
-                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                <p className="mt-1 text-xs text-(--muted-foreground)">
                   — {quote.author}
                 </p>
               )}
@@ -319,7 +319,7 @@ export function DashboardClient({
           <div className="grid gap-6 md:grid-cols-2">
             <div>
               <h3 className="font-semibold">Log your weight</h3>
-              <p className="mb-2 text-sm text-[var(--muted-foreground)]">
+              <p className="mb-2 text-sm text-(--muted-foreground)">
                 Track your progress with each measurement
               </p>
               <form onSubmit={handleAddWeight} className="flex gap-2">
@@ -340,7 +340,7 @@ export function DashboardClient({
             </div>
             <div>
               <h3 className="font-semibold">Set Short-Term Goal</h3>
-              <p className="mb-2 text-sm text-[var(--muted-foreground)]">
+              <p className="mb-2 text-sm text-(--muted-foreground)">
                 Goal weight and deadline
               </p>
               <form onSubmit={handleAddGoal} className="flex flex-wrap gap-2">
@@ -380,16 +380,16 @@ export function DashboardClient({
               {currentBMI != null ? currentBMI.toFixed(1) : "—"}
             </CardTitle>
             {currentBMI != null && (
-              <p className="text-sm text-[var(--muted-foreground)]">
+              <p className="text-sm text-(--muted-foreground)">
                 {getBMICategory(currentBMI)}
               </p>
             )}
-            <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm text-(--muted-foreground)">
               <input
                 type="checkbox"
                 checked={showBMIZones}
                 onChange={(e) => setShowBMIZones(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+                className="h-4 w-4 cursor-pointer rounded border-(--border) bg-(--muted) accent-(--accent)"
               />
               <span>Show BMI zones on chart</span>
             </label>
@@ -400,24 +400,24 @@ export function DashboardClient({
             <CardDescription>7-day</CardDescription>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-base">
-                <span className="text-[var(--muted-foreground)]">Trend:</span>
+                <span className="text-(--muted-foreground)">Trend:</span>
                 {trend !== null ? (
                   <span className="flex items-center gap-1 text-lg font-medium">
                     {trend > 0 && <TrendingUp className="h-5 w-5 text-amber-500" />}
                     {trend < 0 && <TrendingDown className="h-5 w-5 text-emerald-500" />}
-                    {trend === 0 && <Minus className="h-5 w-5 text-[var(--muted-foreground)]" />}
+                    {trend === 0 && <Minus className="h-5 w-5 text-(--muted-foreground)" />}
                     {trend > 0 ? "+" : ""}
                     {trend.toFixed(1)} kg
                   </span>
                 ) : (
-                  <span className="text-lg text-[var(--muted-foreground)]">N/A</span>
+                  <span className="text-lg text-(--muted-foreground)">N/A</span>
                 )}
               </div>
               <div className="flex items-center gap-2 text-base">
-                <span className="text-[var(--muted-foreground)]">Average:</span>
+                <span className="text-(--muted-foreground)">Average:</span>
                 <span className="text-lg font-medium">
                   {rollingAvg != null ? `${rollingAvg.toFixed(1)} kg` : (
-                    <span className="text-[var(--muted-foreground)]">N/A</span>
+                    <span className="text-(--muted-foreground)">N/A</span>
                   )}
                 </span>
               </div>
@@ -429,37 +429,37 @@ export function DashboardClient({
             <CardDescription>Goals</CardDescription>
             <div className="relative">
               {upcomingShortTermGoal ? (
-                <p className="text-2xl font-semibold text-[var(--accent)]">
+                <p className="text-2xl font-semibold text-(--accent)">
                   {upcomingShortTermGoal.target_weight_kg} kg
                 </p>
               ) : (
-                <p className="text-sm text-[var(--muted-foreground)]">No short-term goal</p>
+                <p className="text-sm text-(--muted-foreground)">No short-term goal</p>
               )}
               {targetWeightKg != null && (
-                <p className="absolute right-0 top-0 text-xs text-[var(--muted-foreground)]">
+                <p className="absolute right-0 top-0 text-xs text-(--muted-foreground)">
                   Long-term: {targetWeightKg} kg
                 </p>
               )}
             </div>
             <div className="mt-2 space-y-1">
               {targetWeightKg != null && (
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-(--muted-foreground)">
                   <input
                     type="checkbox"
                     checked={showGoalLine}
                     onChange={(e) => setShowGoalLine(e.target.checked)}
-                    className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+                    className="h-4 w-4 cursor-pointer rounded border-(--border) bg-(--muted) accent-(--accent)"
                   />
                   <span>Show long-term goal line</span>
                 </label>
               )}
               {upcomingShortTermGoal != null && (
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-(--muted-foreground)">
                   <input
                     type="checkbox"
                     checked={showShortTermGoalLine}
                     onChange={(e) => setShowShortTermGoalLine(e.target.checked)}
-                    className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+                    className="h-4 w-4 cursor-pointer rounded border-(--border) bg-(--muted) accent-(--accent)"
                   />
                   <span>Show short-term goal line</span>
                 </label>
@@ -479,12 +479,12 @@ export function DashboardClient({
                 <CardDescription>Based on your personal information</CardDescription>
               )}
             </div>
-            <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-[var(--muted-foreground)]">
+            <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-(--muted-foreground)">
               <input
                 type="checkbox"
                 checked={showFullHistory}
                 onChange={(e) => setShowFullHistory(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded border-[var(--border)] bg-[var(--muted)] accent-[var(--accent)]"
+                className="h-4 w-4 cursor-pointer rounded border-(--border) bg-(--muted) accent-(--accent)"
               />
               <span>Show full history</span>
             </label>
@@ -527,13 +527,13 @@ export function DashboardClient({
                       const weight = point.value;
                       const fullDate = point.payload?.fullDate;
                       return (
-                        <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-2 shadow-lg text-base">
-                          <p className="font-medium text-[var(--foreground)]">
+                        <div className="rounded-lg border border-(--border) bg-(--card) p-2 shadow-lg text-base">
+                          <p className="font-medium text-foreground">
                             {fullDate
                               ? format(new Date(fullDate), "PPp")
                               : point.payload?.date}
                           </p>
-                          <p className="text-[var(--accent)]">
+                          <p className="text-(--accent)">
                             {weight != null ? `${weight} kg` : ""}
                           </p>
                         </div>
@@ -654,11 +654,11 @@ export function DashboardClient({
                 return (
                   <li
                     key={goal.id}
-                    className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-4"
+                    className="flex flex-col gap-2 rounded-lg border border-(--border) p-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Target className="h-5 w-5 text-[var(--accent)]" />
+                        <Target className="h-5 w-5 text-(--accent)" />
                         <span className="text-lg font-semibold">
                           {goal.target_weight_kg} kg
                         </span>
@@ -670,7 +670,7 @@ export function DashboardClient({
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-[var(--muted-foreground)]">
+                        <span className="text-sm text-(--muted-foreground)">
                           Deadline: {format(deadlineDate, "PP")}
                         </span>
                         <Button
@@ -719,8 +719,8 @@ export function DashboardClient({
                                     onClick={() => setAmbitiousPopoverGoalId(null)}
                                     aria-hidden
                                   />
-                                  <div className="absolute right-0 top-full z-50 mt-1 w-[250px] rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 shadow-lg">
-                                    <p className="text-sm text-[var(--foreground)]">
+                                  <div className="absolute right-0 top-full z-50 mt-1 w-[250px] rounded-lg border border-(--border) bg-(--card) p-3 shadow-lg">
+                                    <p className="text-sm text-foreground">
                                       Health experts typically recommend losing 0.5–1 kg per week.
                                       Losing more than 1 kg/week can be difficult to sustain and
                                       may not be healthy.
@@ -728,7 +728,7 @@ export function DashboardClient({
                                     <button
                                       type="button"
                                       onClick={() => setAmbitiousPopoverGoalId(null)}
-                                      className="mt-2 text-xs font-medium text-[var(--accent)] hover:underline"
+                                      className="mt-2 text-xs font-medium text-(--accent) hover:underline"
                                     >
                                       Close
                                     </button>
@@ -755,11 +755,11 @@ export function DashboardClient({
           onClick={() => setDeleteGoalTarget(null)}
         >
           <div
-            className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-lg"
+            className="w-full max-w-sm rounded-xl border border-(--border) bg-(--card) p-6 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold">Delete goal?</h3>
-            <p className="mt-2 text-[var(--muted-foreground)]">
+            <p className="mt-2 text-(--muted-foreground)">
               Are you sure you want to delete this goal?
             </p>
             <p className="mt-1 font-medium">
@@ -791,11 +791,11 @@ export function DashboardClient({
           onClick={() => setDeleteTarget(null)}
         >
           <div
-            className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-lg"
+            className="w-full max-w-sm rounded-xl border border-(--border) bg-(--card) p-6 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold">Delete weight entry?</h3>
-            <p className="mt-2 text-[var(--muted-foreground)]">
+            <p className="mt-2 text-(--muted-foreground)">
               Are you sure you want to delete this input?
             </p>
             <p className="mt-1 font-medium">
@@ -828,7 +828,7 @@ export function DashboardClient({
         </CardHeader>
         <CardContent>
           {measurements.length === 0 ? (
-            <p className="py-8 text-center text-[var(--muted-foreground)]">
+            <p className="py-8 text-center text-(--muted-foreground)">
               No measurements yet. Add your first weight above!
             </p>
           ) : (
@@ -837,11 +837,11 @@ export function DashboardClient({
                 {visibleMeasurements.map((m) => (
                   <li
                     key={m.id}
-                    className="flex items-center justify-between rounded-lg border border-[var(--border)] p-3"
+                    className="flex items-center justify-between rounded-lg border border-(--border) p-3"
                   >
                     <div>
                       <span className="font-semibold">{m.weight_kg} kg</span>
-                      <span className="ml-2 text-sm text-[var(--muted-foreground)]">
+                      <span className="ml-2 text-sm text-(--muted-foreground)">
                         {format(new Date(m.created_at ?? ""), "PP")}
                       </span>
                     </div>

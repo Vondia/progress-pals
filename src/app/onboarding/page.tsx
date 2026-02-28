@@ -72,7 +72,7 @@ export default function OnboardingPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="mb-8 flex items-center gap-2">
-        <Scale className="h-8 w-8 text-[var(--accent)]" />
+        <Scale className="h-8 w-8 text-(--accent)" />
         <span className="text-2xl font-bold">Progress Pals</span>
       </div>
 
@@ -93,7 +93,7 @@ export default function OnboardingPage() {
             <div className="space-y-2">
               <Label htmlFor="height_cm">Height (cm)</Label>
               <div className="relative">
-                <Ruler className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Ruler className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <Input
                   id="height_cm"
                   type="number"
@@ -111,7 +111,7 @@ export default function OnboardingPage() {
             <div className="space-y-2">
               <Label htmlFor="target_weight_kg">Target weight (kg)</Label>
               <div className="relative">
-                <Target className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Target className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <Input
                   id="target_weight_kg"
                   type="number"
@@ -129,7 +129,7 @@ export default function OnboardingPage() {
             <div className="space-y-2">
               <Label htmlFor="birthdate">Birthdate</Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <Input
                   id="birthdate"
                   type="date"
@@ -143,10 +143,10 @@ export default function OnboardingPage() {
             <div className="space-y-2">
               <Label htmlFor="gender">Gender</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <select
                   id="gender"
-                  className="flex h-10 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--muted)]/50 pl-10 pr-8 text-sm ring-offset-[var(--background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+                  className="flex h-10 w-full appearance-none rounded-lg border border-(--border) bg-(--muted)/50 pl-10 pr-8 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--accent) focus-visible:ring-offset-2"
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
                 >

@@ -48,13 +48,13 @@ export default function RegisterPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4">
         <div className="mb-8 flex items-center gap-2">
-          <Scale className="h-8 w-8 text-[var(--accent)]" />
+          <Scale className="h-8 w-8 text-(--accent)" />
           <span className="text-2xl font-bold">Progress Pals</span>
         </div>
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-1 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent)]/20">
-              <CheckCircle2 className="h-10 w-10 text-[var(--accent)]" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-(--accent)/20">
+              <CheckCircle2 className="h-10 w-10 text-(--accent)" />
             </div>
             <CardTitle className="text-2xl">Check your email</CardTitle>
             <CardDescription>
@@ -78,7 +78,7 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="mb-8 flex items-center gap-2">
-        <Scale className="h-8 w-8 text-[var(--accent)]" />
+        <Scale className="h-8 w-8 text-(--accent)" />
         <span className="text-2xl font-bold">Progress Pals</span>
       </div>
 
@@ -99,7 +99,7 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <Input
                   id="email"
                   type="email"
@@ -115,7 +115,7 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <Input
                   id="password"
                   type="password"
@@ -128,7 +128,7 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                 />
               </div>
-              <p className="text-xs text-[var(--muted-foreground)]">
+              <p className="text-xs text-(--muted-foreground)">
                 At least 6 characters
               </p>
             </div>
@@ -143,11 +143,11 @@ export default function RegisterPage() {
               {status === "loading" ? "Creating account…" : "Sign up"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <p className="text-center text-sm text-[var(--muted-foreground)]">
+            <p className="text-center text-sm text-(--muted-foreground)">
               Already have an account?{" "}
               <Link
                 href="/login"
-                className="font-medium text-[var(--accent)] hover:underline"
+                className="font-medium text-(--accent) hover:underline"
               >
                 Sign in
               </Link>

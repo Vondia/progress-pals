@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
@@ -24,11 +24,11 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (searchParams.get("error") === "auth") {
-      setError("Authentication failed. Please try again.");
-    }
-  }, [searchParams]);
+  const authErrorFromUrl =
+    searchParams.get("error") === "auth"
+      ? "Authentication failed. Please try again."
+      : null;
+  const displayedError = error ?? authErrorFromUrl;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,7 +49,7 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="mb-8 flex items-center gap-2">
-        <Scale className="h-8 w-8 text-[var(--accent)]" />
+        <Scale className="h-8 w-8 text-(--accent)" />
         <span className="text-2xl font-bold">Progress Pals</span>
       </div>
 
@@ -62,15 +62,15 @@ function LoginForm() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {error && (
+            {displayedError && (
               <div className="rounded-lg bg-red-500/20 p-3 text-sm text-red-400">
-                {error}
+                {displayedError}
               </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <Input
                   id="email"
                   type="email"
@@ -86,7 +86,7 @@ function LoginForm() {
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-(--muted-foreground)" />
                 <Input
                   id="password"
                   type="password"
@@ -110,11 +110,11 @@ function LoginForm() {
               {loading ? "Signing in…" : "Sign in"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <p className="text-center text-sm text-[var(--muted-foreground)]">
+            <p className="text-center text-sm text-(--muted-foreground)">
               Don&apos;t have an account?{" "}
               <Link
                 href="/register"
-                className="font-medium text-[var(--accent)] hover:underline"
+                className="font-medium text-(--accent) hover:underline"
               >
                 Sign up
               </Link>
@@ -130,7 +130,7 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-[var(--muted-foreground)]">Loading…</div>
+        <div className="text-(--muted-foreground)">Loading…</div>
       </div>
     }>
       <LoginForm />
