@@ -2,7 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { format, subDays, addMonths, differenceInDays } from "date-fns";
+import {
+  format,
+  subDays,
+  addMonths,
+  subMonths,
+  startOfMonth,
+  endOfDay,
+  differenceInDays,
+} from "date-fns";
 import {
   LineChart,
   Line,
@@ -90,6 +98,7 @@ export function DashboardClient({
   const [showBMIZones, setShowBMIZones] = useState(false);
   const [showGoalLine, setShowGoalLine] = useState(false);
   const [showShortTermGoalLine, setShowShortTermGoalLine] = useState(false);
+  const [showRecent, setShowRecent] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Measurement | null>(null);
   const [deleteGoalTarget, setDeleteGoalTarget] = useState<Goal | null>(null);
@@ -142,9 +151,22 @@ export function DashboardClient({
 
   const bmiZones = getBMIZoneBoundaries(heightCm);
 
-  const chartLimit =
-    showFullHistory ? measurements.length : (showGoalLine || showShortTermGoalLine ? 25 : 50);
-  const chartMeasurements = showFullHistory ? measurements : measurements.slice(0, chartLimit);
+  const recentRangeStart = startOfMonth(subMonths(now, 1));
+  const recentRangeEnd = endOfDay(now);
+
+  let chartMeasurements: Measurement[];
+  if (showFullHistory) {
+    chartMeasurements = measurements;
+  } else if (showRecent) {
+    chartMeasurements = measurements.filter((m) => {
+      const d = new Date(m.created_at ?? "");
+      return d >= recentRangeStart && d <= recentRangeEnd;
+    });
+  } else {
+    const chartLimit =
+      showGoalLine || showShortTermGoalLine ? 25 : 50;
+    chartMeasurements = measurements.slice(0, chartLimit);
+  }
   const chartData = [...chartMeasurements].reverse().map((m) => ({
     id: m.id,
     date: format(new Date(m.created_at ?? ""), "MMM d"),
@@ -479,19 +501,42 @@ export function DashboardClient({
                 <CardDescription>Based on your personal information</CardDescription>
               )}
             </div>
-            <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-(--muted-foreground)">
-              <input
-                type="checkbox"
-                checked={showFullHistory}
-                onChange={(e) => setShowFullHistory(e.target.checked)}
-                className="h-4 w-4 cursor-pointer rounded border-(--border) bg-(--muted) accent-(--accent)"
-              />
-              <span>Show full history</span>
-            </label>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-4">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-(--muted-foreground)">
+                <input
+                  type="checkbox"
+                  checked={showRecent}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setShowRecent(checked);
+                    if (checked) setShowFullHistory(false);
+                  }}
+                  className="h-4 w-4 cursor-pointer rounded border-(--border) bg-(--muted) accent-(--accent)"
+                />
+                <span>Show recent</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-(--muted-foreground)">
+                <input
+                  type="checkbox"
+                  checked={showFullHistory}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setShowFullHistory(checked);
+                    if (checked) setShowRecent(false);
+                  }}
+                  className="h-4 w-4 cursor-pointer rounded border-(--border) bg-(--muted) accent-(--accent)"
+                />
+                <span>Show full history</span>
+              </label>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%" key={`${showBMIZones}-${showGoalLine}-${showShortTermGoalLine}`}>
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+                key={`${showBMIZones}-${showGoalLine}-${showShortTermGoalLine}-${showRecent}-${showFullHistory}`}
+              >
                 <LineChart
                   data={chartData}
                   margin={{
